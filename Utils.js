@@ -1,6 +1,12 @@
 const https = require("https");
 
 module.exports = {
+   /*
+   
+    testExportFn: function() { console.log("Modular Fns Test"); }
+    Delimit functions within the module.exports section using a comma
+    
+   */
   getAT: function(){
     var getOptions = {
       host: "sandbox.safaricom.co.ke",
@@ -12,7 +18,6 @@ module.exports = {
           "Accept":"application/json"
       }
     }
-
     return new Promise(function(resolve, reject) {
       https.request(getOptions, function(res) {
         res.setEncoding("utf-8");
@@ -25,6 +30,7 @@ module.exports = {
       }).end();
     });
   },
+  
   getTimeStamp: function() {
     function parseDate(e) { return (e < 10) ? "0" + e : e; }
     var _date = new Date();
@@ -38,6 +44,7 @@ module.exports = {
     return currentTime.getFullYear() + "" + month + "" + date + "" + 
         hour + "" + minutes + "" + seconds;
   },
+  
   processRequest: function(amount, mssidn) {
     var postBody = JSON.stringify({
      "BusinessShortCode": process.env.SC,
