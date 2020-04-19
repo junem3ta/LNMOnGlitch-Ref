@@ -26,32 +26,41 @@ app.get("/", function(req, res) {
 
 /** 2. Serve static assets  */
 app.use(express.static(__dirname + "/public"));
-/* Preserve code above this comment */
-let localCache = [];
-/*
-  @HelperFn updateLocalCache(requestId, status)
-  ** Update LocalCache For DOM References & MongoDB Collection updates. Used to update localcache entries with
-  the callBackURL results.
-  * A corresponding entry is added to a transactionDB for each Object updated in this localCache.
-  * For efficiency, the Object referring to a transaction is deleted from the LocalCache at the end of the TransactionCycle.
-  *The localcache has an object entry - {"requestId": "", "status": ""}  - for each transaction that ...
-  * ...is updated when the /process endpoint is invoked.
-  *Update the localCache entry for a specific json object and set status to either Completed | Cancelled | Failed
+
+/* @localCache [], Global param [{"status": "", "requestId":""}]
+  ** For interfacing with DOM: AjaxCall->Endpoint->ReturnLocalCache where RequestId
+      1. Prevent DOM From invoking dbCalls Directly
+      2. Avoid Manipulating DOM Directly from Node.js Server.
+      3. Use cache entries to update MongoDB Collections.
 */
+
+let localCache = [];
+
+/*
+  @updateLocalCache(requestId, status) HelperFn 
+  ** Updates LocalCache entries with the callBackURL results for the purpose of DOM References & MongoDB 
+     Collection updates. Used to update localcache 
+  ** A corresponding entry is added to a transactionDB for each Object updated in this localCache.
+  ** For efficiency, the Object referring to a transaction is deleted from the LocalCache at the end 
+     of the TransactionCycle.
+  ** The localcache has an object entry - {"requestId": "", "status": ""}  - for each transaction that 
+     is updated when the /process endpoint is invoked.
+  ** Update the localCache entry for a specific json object and set status to either Completed | Cancelled | Failed
+*/
+
 function updateLocalCache(requestID, status) {
   for(let entry of localCache) {
     if(entry.requestID == requestID) {
       entry.status = status;
       entry.callBackStatus = true;
       entry.timeStamp = Utils.getTimeStamp();
-      console.log(`LocalCache Update ${JSON.stringify(localCache)} @Test2[From CallBackURL]`);
       return entry;
     }
   }
 }
 /*The /process Transaction is to be finished in ~54s.
  **This fn will update the db collection for transactions with unresolved callBacks. We can call this fn 
-   10s after transaction Completion [60s] making the flushAndUpdate independent of endpoint traffic, rather 
+   10s after Transaction cycle Completion, making the flushAndUpdate independent of endpoint traffic, rather 
    than the original idea of having the flushAndUpdateDB() fn called for each transaction.
  **With increased user traffic, the localCache can grow to a considerable size in a short span of time. By including 
    the flushAndUpdateDB() fn, we empty the untracked transactions in our localCache into our db. 
@@ -86,6 +95,7 @@ function flushAndUpdate() {
     });
   }
 }
+
 //Custom code here
 app.post("/process", function(req,res) {
   /*Obtain request payload from app UI*/
@@ -171,6 +181,7 @@ app.post("/hooks/lnmResponse", function(req,res) {
   let message = {"ResponseCode": "0", "ResponseDesc": "success"};
   res.json(message);
 });
+
 /*LocalCache Listener for Updating appUI*/
 app.post("/listener", function(req,res) {
   console.log(JSON.stringify(req.body));
